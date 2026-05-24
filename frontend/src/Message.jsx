@@ -1,33 +1,37 @@
-import ToolBadge from "./ToolBadge";
-
-export default function Message({ role, content, toolsUsed }) {
+export default function Message({ role, content }) {
   const isUser = role === "user";
 
   return (
     <div style={{
       display: "flex",
       justifyContent: isUser ? "flex-end" : "flex-start",
-      marginBottom: "16px",
+      marginBottom: "14px",
+      animation: "slideUp 0.2s ease",
     }}>
-      <div style={{ maxWidth: "70%" }}>
-        {/* Tool badges — only on agent messages */}
-        {!isUser && toolsUsed?.length > 0 && (
-          <div style={{ marginBottom: "6px" }}>
-            {toolsUsed.map((t) => <ToolBadge key={t} tool={t} />)}
-          </div>
-        )}
-
+      {!isUser && (
         <div style={{
-          padding: "12px 16px",
-          borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-          background: isUser ? "#4466cc" : "#f1f1f1",
-          color: isUser ? "#fff" : "#111",
-          fontSize: "14px",
-          lineHeight: "1.6",
-          whiteSpace: "pre-wrap",
-        }}>
-          {content}
-        </div>
+          width: 28, height: 28, borderRadius: "50%",
+          background: "#1c2040", border: "1px solid #252a45",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, fontWeight: 600, color: "#7c6df5",
+          marginRight: 8, flexShrink: 0, marginTop: 2,
+        }}>A</div>
+      )}
+
+      <div style={{
+        maxWidth: "75%",
+        padding: "10px 14px",
+        borderRadius: isUser
+          ? "16px 16px 4px 16px"
+          : "16px 16px 16px 4px",
+        background: isUser ? "#3730a3" : "#13162b",
+        border: isUser ? "none" : "1px solid #1c2040",
+        fontSize: 14,
+        lineHeight: 1.65,
+        color: isUser ? "#e8eaf6" : "#c8cce8",
+        whiteSpace: "pre-wrap",
+      }}>
+        {content}
       </div>
     </div>
   );
