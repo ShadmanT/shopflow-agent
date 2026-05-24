@@ -7,6 +7,9 @@ sys.path.append(os.path.dirname(__file__))
 from dotenv import load_dotenv
 load_dotenv()
 
+from knowledge_base import build_knowledge_base
+build_knowledge_base()
+
 from tools import TOOL_DEFINITIONS, execute_tool
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))

@@ -2,8 +2,8 @@ import json
 import sys
 import os
 sys.path.append(os.path.dirname(__file__))
-
 from database import get_order, refund_order, get_product, get_inventory, create_escalation
+from knowledge_base import search_knowledge_base
 
 # ── Tool schemas (what Claude sees) ───────────────────────────────────────────
 
@@ -121,8 +121,29 @@ TOOL_DEFINITIONS = [
                 }
             },
             "required": ["reason", "urgency"]
+        },
+
+    },
+    {
+        "name": "search_knowledge_base",
+        "description": (
+            "Search ShopFlow's internal knowledge base for policy information. "
+            "Use this to answer questions about return policies, shipping times, "
+            "warranty coverage, and store policies. "
+            "Always search here before answering policy questions from memory."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The policy question to search for, e.g. 'return window for damaged items'"
+                }
+            },
+            "required": ["query"]
         }
     }
+
 ]
 
 
@@ -172,6 +193,9 @@ def execute_tool(name: str, inputs: dict) -> dict:
                 urgency=inputs["urgency"],
                 summary=inputs.get("summary")
             )
+        
+        elif name == "search_knowledge_base":
+            return search_knowledge_base(inputs["query"])
 
         else:
             return {"error": f"Unknown tool: {name}"}
