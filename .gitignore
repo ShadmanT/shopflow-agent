@@ -1,8 +1,19 @@
+# Python
 .env
-shopflow.db
 __pycache__/
 *.pyc
+venv/
+
+# Database
+shopflow.db
+
+# ChromaDB
+chroma_db/
+
+# Frontend
 node_modules/
 dist/
-chroma_db/
-venv/
+
+# OS
+.DS_Store
+Thumbs.db
