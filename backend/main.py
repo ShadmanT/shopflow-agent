@@ -43,3 +43,13 @@ async def chat_stream(request: ChatRequest):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+# Serve React frontend — must come after API routes
+FRONTEND_BUILD = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+if os.path.exists(FRONTEND_BUILD):
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_BUILD, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        return FileResponse(os.path.join(FRONTEND_BUILD, "index.html"))
