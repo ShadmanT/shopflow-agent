@@ -99,3 +99,72 @@ def run_agent(messages: list[dict]) -> dict:
                 "response": "Something unexpected happened. Please try again.",
                 "tools_used": tools_used
             }
+
+
+def stream_agent(messages: list[dict]):
+    """
+    Generator that yields events as tools fire.
+    Types: tool_start | tool_result | response | error
+    """
+    loop_messages = list(messages)
+
+    while True:
+        try:
+            with client.messages.stream(
+                model="claude-sonnet-4-5",
+                max_tokens=1024,
+                system=SYSTEM_PROMPT,
+                tools=TOOL_DEFINITIONS,
+                messages=loop_messages
+            ) as stream:
+                full_response = stream.get_final_message()
+        except Exception as e:
+            yield {"type": "error", "message": str(e)}
+            return
+
+        if full_response.stop_reason == "end_turn":
+            text = next(
+                (block.text for block in full_response.content if hasattr(block, "text")),
+                "I wasn't able to generate a response. Please try again."
+            )
+            yield {"type": "response", "text": text}
+            return
+
+        if full_response.stop_reason == "tool_use":
+            loop_messages.append({
+                "role": "assistant",
+                "content": full_response.content
+            })
+
+            tool_results = []
+            for block in full_response.content:
+                if block.type == "tool_use":
+                    yield {
+                        "type": "tool_start",
+                        "tool": block.name,
+                        "input": block.input,
+                        "id": block.id
+                    }
+
+                    result = execute_tool(block.name, block.input)
+
+                    yield {
+                        "type": "tool_result",
+                        "tool": block.name,
+                        "result": result,
+                        "id": block.id
+                    }
+
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(result)
+                    })
+
+            loop_messages.append({
+                "role": "user",
+                "content": tool_results
+            })
+        else:
+            yield {"type": "error", "message": f"Unexpected stop: {full_response.stop_reason}"}
+            return
