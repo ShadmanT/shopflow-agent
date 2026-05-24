@@ -1,7 +1,6 @@
 [phases.build]
 cmds = [
-    "npm install --prefix frontend",
-    "npm run build --prefix frontend",
+    "npm run build",
     "pip install -r backend/requirements.txt"
 ]
 
