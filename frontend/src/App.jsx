@@ -3,6 +3,8 @@ import Message from "./Message";
 import AgentActivity from "./AgentActivity";
 import { streamMessage } from "./api";
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 const SUGGESTIONS = [
   "My order ORD-1001 is late, can I get a refund?",
   "Order ORD-1007 never arrived",
@@ -16,12 +18,30 @@ export default function App() {
   const [activity, setActivity]   = useState([]);
   const [input, setInput]         = useState("");
   const [loading, setLoading]     = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg]   = useState("");
   const bottomRef                 = useRef(null);
   const inputRef                  = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  async function resetDemo() {
+    setResetting(true);
+    setResetMsg("");
+    try {
+      await fetch(`${API_URL}/reset`, { method: "POST" });
+      setMessages([]);
+      setActivity([]);
+      setResetMsg("reset done");
+      setTimeout(() => setResetMsg(""), 2000);
+    } catch {
+      setResetMsg("reset failed");
+      setTimeout(() => setResetMsg(""), 2000);
+    }
+    setResetting(false);
+  }
 
   async function submit(text) {
     const userText = (text ?? input).trim();
@@ -85,15 +105,40 @@ export default function App() {
           <div style={{ fontSize: 14, fontWeight: 600, color: "#e2e6f0" }}>Sage</div>
           <div style={{ fontSize: 11, color: "#4a5380" }}>ShopFlow Support Agent</div>
         </div>
-        <div style={{
-          marginLeft: "auto", display: "flex", alignItems: "center", gap: 6,
-          fontSize: 11, color: "#3ecf8e",
-        }}>
+
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Reset button */}
+          <button
+            onClick={resetDemo}
+            disabled={resetting || loading}
+            style={{
+              background: "transparent",
+              border: "1px solid #252a45",
+              borderRadius: 6,
+              padding: "4px 12px",
+              fontSize: 11,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: resetMsg === "reset done" ? "#3ecf8e" : resetMsg === "reset failed" ? "#f87171" : "#4a5380",
+              cursor: resetting || loading ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { if (!resetting && !loading) e.target.style.borderColor = "#7c6df5"; }}
+            onMouseLeave={e => { e.target.style.borderColor = "#252a45"; }}
+          >
+            {resetting ? "resetting..." : resetMsg || "reset demo"}
+          </button>
+
+          {/* Online indicator */}
           <div style={{
-            width: 6, height: 6, borderRadius: "50%", background: "#3ecf8e",
-            animation: "pulse 2s ease-in-out infinite",
-          }} />
-          online
+            display: "flex", alignItems: "center", gap: 6,
+            fontSize: 11, color: "#3ecf8e",
+          }}>
+            <div style={{
+              width: 6, height: 6, borderRadius: "50%", background: "#3ecf8e",
+              animation: "pulse 2s ease-in-out infinite",
+            }} />
+            online
+          </div>
         </div>
       </div>
 
@@ -148,7 +193,7 @@ export default function App() {
                   background: "#1c2040", border: "1px solid #252a45",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 11, fontWeight: 600, color: "#7c6df5",
-                }}>A</div>
+                }}>S</div>
                 <div style={{ display: "flex", gap: 4 }}>
                   {[0, 1, 2].map(i => (
                     <div key={i} style={{

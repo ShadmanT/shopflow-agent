@@ -45,6 +45,15 @@ async def chat_stream(request: ChatRequest):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
+@app.post("/reset")
+async def reset_demo():
+    import sys
+    import os
+    sys.path.append(os.path.dirname(__file__))
+    from seed import seed
+    seed()
+    return {"success": True, "message": "Demo data reset to original state"}
+
 # Serve React frontend — must come after API routes
 FRONTEND_BUILD = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
