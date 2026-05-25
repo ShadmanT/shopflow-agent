@@ -31,6 +31,7 @@ function ToolCard({ item }) {
       padding: "12px 14px",
       animation: "slideUp 0.2s ease",
       transition: "border-color 0.3s",
+      flexShrink: 0,
     }}>
       {/* Tool name + status */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
@@ -84,11 +85,11 @@ export default function AgentActivity({ activity, loading }) {
 
   return (
     <div style={{
-      flex: "0 0 40%",
       display: "flex",
       flexDirection: "column",
       background: "#0b0d1a",
       overflow: "hidden",
+      flex: 1,
     }}>
       {/* Console header */}
       <div style={{
@@ -117,29 +118,33 @@ export default function AgentActivity({ activity, loading }) {
         )}
       </div>
 
-      {/* Events */}
-      <div style={{
-        flex: 1, overflowY: "auto",
-        padding: isEmpty ? "0" : "14px",
-        display: "flex", flexDirection: "column", gap: 8,
-      }}>
-        {isEmpty && (
-          <div style={{
-            flex: 1, display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            color: "#252a45", gap: 10,
-          }}>
+      {/* Events — position absolute so it fills exactly the remaining space */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        <div style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          overflowY: "auto",
+          padding: isEmpty ? "0" : "14px",
+          display: "flex", flexDirection: "column", gap: 8,
+        }}>
+          {isEmpty && (
             <div style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11, textAlign: "center", lineHeight: 1.8,
+              flex: 1, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              color: "#252a45", gap: 10,
             }}>
-              {"// tool calls will appear\n// here in real time"}
+              <div style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, textAlign: "center", lineHeight: 1.8,
+              }}>
+                {"// tool calls will appear\n// here in real time"}
+              </div>
             </div>
-          </div>
-        )}
-        {activity.map((item) => (
-          <ToolCard key={item.id} item={item} />
-        ))}
+          )}
+          {activity.map((item) => (
+            <ToolCard key={item.id} item={item} />
+          ))}
+        </div>
       </div>
     </div>
   );
