@@ -88,6 +88,37 @@ export default function App() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
 
+      <style>{`
+        .body-inner {
+          display: flex;
+          flex-direction: row;
+          flex: 1;
+          overflow: hidden;
+        }
+        .chat-panel {
+          flex: 0 0 60%;
+          display: flex;
+          flex-direction: column;
+          border-right: 1px solid #1a1d2e;
+          overflow: hidden;
+        }
+        .console-panel {
+          flex: 0 0 40%;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        @media (max-width: 768px) {
+          .body-inner { flex-direction: column; }
+          .chat-panel {
+            flex: 0 0 55%;
+            border-right: none;
+            border-bottom: 1px solid #1a1d2e;
+          }
+          .console-panel { flex: 0 0 45%; }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
@@ -107,7 +138,6 @@ export default function App() {
         </div>
 
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Reset button */}
           <button
             onClick={resetDemo}
             disabled={resetting || loading}
@@ -128,7 +158,6 @@ export default function App() {
             {resetting ? "resetting..." : resetMsg || "reset demo"}
           </button>
 
-          {/* Online indicator */}
           <div style={{
             display: "flex", alignItems: "center", gap: 6,
             fontSize: 11, color: "#3ecf8e",
@@ -144,113 +173,114 @@ export default function App() {
 
       {/* Body */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <div className="body-inner">
 
-        {/* Chat panel */}
-        <div style={{
-          flex: "0 0 60%",
-          display: "flex", flexDirection: "column",
-          borderRight: "1px solid #1a1d2e",
-        }}>
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+          {/* Chat panel */}
+          <div className="chat-panel">
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
 
-            {isEmpty && (
-              <div style={{
-                display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center",
-                height: "100%", gap: 20, paddingBottom: 40,
-              }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>🛍</div>
-                  <div style={{ fontSize: 15, color: "#6b7ab5", lineHeight: 1.7 }}>
-                    Hi, I'm Sage.<br />How can I help you today?
+              {isEmpty && (
+                <div style={{
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  height: "100%", gap: 20, paddingBottom: 40,
+                }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🛍</div>
+                    <div style={{ fontSize: 15, color: "#6b7ab5", lineHeight: 1.7 }}>
+                      Hi, I'm Sage.<br />How can I help you today?
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", maxWidth: 360 }}>
+                    {SUGGESTIONS.map(s => (
+                      <button key={s} onClick={() => submit(s)} style={{
+                        background: "#13162b", border: "1px solid #252a45",
+                        borderRadius: 8, padding: "9px 14px",
+                        fontSize: 12, color: "#8892c4", cursor: "pointer",
+                        textAlign: "left", transition: "border-color 0.15s, color 0.15s",
+                        fontFamily: "inherit",
+                      }}
+                      onMouseEnter={e => { e.target.style.borderColor = "#7c6df5"; e.target.style.color = "#e2e6f0"; }}
+                      onMouseLeave={e => { e.target.style.borderColor = "#252a45"; e.target.style.color = "#8892c4"; }}
+                      >{s}</button>
+                    ))}
                   </div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", maxWidth: 360 }}>
-                  {SUGGESTIONS.map(s => (
-                    <button key={s} onClick={() => submit(s)} style={{
-                      background: "#13162b", border: "1px solid #252a45",
-                      borderRadius: 8, padding: "9px 14px",
-                      fontSize: 12, color: "#8892c4", cursor: "pointer",
-                      textAlign: "left", transition: "border-color 0.15s, color 0.15s",
-                      fontFamily: "inherit",
-                    }}
-                    onMouseEnter={e => { e.target.style.borderColor = "#7c6df5"; e.target.style.color = "#e2e6f0"; }}
-                    onMouseLeave={e => { e.target.style.borderColor = "#252a45"; e.target.style.color = "#8892c4"; }}
-                    >{s}</button>
-                  ))}
+              )}
+
+              {messages.map((m, i) => (
+                <Message key={i} role={m.role} content={m.content} />
+              ))}
+
+              {loading && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: "#1c2040", border: "1px solid #252a45",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 600, color: "#7c6df5",
+                  }}>S</div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[0, 1, 2].map(i => (
+                      <div key={i} style={{
+                        width: 5, height: 5, borderRadius: "50%",
+                        background: "#4a5380",
+                        animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                      }} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {messages.map((m, i) => (
-              <Message key={i} role={m.role} content={m.content} />
-            ))}
+              <div ref={bottomRef} />
+            </div>
 
-            {loading && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: "50%",
-                  background: "#1c2040", border: "1px solid #252a45",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 600, color: "#7c6df5",
-                }}>S</div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {[0, 1, 2].map(i => (
-                    <div key={i} style={{
-                      width: 5, height: 5, borderRadius: "50%",
-                      background: "#4a5380",
-                      animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-                    }} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
+            {/* Input */}
+            <div style={{
+              padding: "14px 20px",
+              borderTop: "1px solid #1a1d2e",
+              display: "flex", gap: 8, flexShrink: 0,
+            }}>
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && submit()}
+                placeholder="Ask about an order or product..."
+                disabled={loading}
+                style={{
+                  flex: 1, padding: "10px 14px",
+                  background: "#13162b", border: "1px solid #252a45",
+                  borderRadius: 8, fontSize: 13, color: "#e2e6f0",
+                  outline: "none", fontFamily: "inherit",
+                  transition: "border-color 0.15s",
+                }}
+                onFocus={e => e.target.style.borderColor = "#7c6df5"}
+                onBlur={e => e.target.style.borderColor = "#252a45"}
+              />
+              <button
+                onClick={() => submit()}
+                disabled={!input.trim() || loading}
+                style={{
+                  padding: "10px 18px",
+                  background: input.trim() && !loading ? "#4338ca" : "#13162b",
+                  border: "1px solid",
+                  borderColor: input.trim() && !loading ? "#4338ca" : "#252a45",
+                  borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  color: input.trim() && !loading ? "#fff" : "#4a5580",
+                  cursor: input.trim() && !loading ? "pointer" : "not-allowed",
+                  transition: "all 0.15s", fontFamily: "inherit",
+                }}
+              >Send</button>
+            </div>
           </div>
 
-          {/* Input */}
-          <div style={{
-            padding: "14px 20px",
-            borderTop: "1px solid #1a1d2e",
-            display: "flex", gap: 8, flexShrink: 0,
-          }}>
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && submit()}
-              placeholder="Ask about an order or product..."
-              disabled={loading}
-              style={{
-                flex: 1, padding: "10px 14px",
-                background: "#13162b", border: "1px solid #252a45",
-                borderRadius: 8, fontSize: 13, color: "#e2e6f0",
-                outline: "none", fontFamily: "inherit",
-                transition: "border-color 0.15s",
-              }}
-              onFocus={e => e.target.style.borderColor = "#7c6df5"}
-              onBlur={e => e.target.style.borderColor = "#252a45"}
-            />
-            <button
-              onClick={() => submit()}
-              disabled={!input.trim() || loading}
-              style={{
-                padding: "10px 18px",
-                background: input.trim() && !loading ? "#4338ca" : "#13162b",
-                border: "1px solid",
-                borderColor: input.trim() && !loading ? "#4338ca" : "#252a45",
-                borderRadius: 8, fontSize: 13, fontWeight: 500,
-                color: input.trim() && !loading ? "#fff" : "#4a5380",
-                cursor: input.trim() && !loading ? "pointer" : "not-allowed",
-                transition: "all 0.15s", fontFamily: "inherit",
-              }}
-            >Send</button>
+          {/* Console panel */}
+          <div className="console-panel">
+            <AgentActivity activity={activity} loading={loading} />
           </div>
+
         </div>
-
-        {/* Console panel */}
-        <AgentActivity activity={activity} loading={loading} />
       </div>
     </div>
   );
