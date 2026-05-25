@@ -2,6 +2,10 @@
 
 An AI customer support agent for a fictional e-commerce store, built with Claude's tool use API. The agent can look up orders, process refunds, check inventory, search policy docs, and escalate to human agents — all through multi-step tool calls.
 
+**Live demo: [shopflow-agent-production.up.railway.app](https://shopflow-agent-production.up.railway.app)**
+
+![ShopFlow Agent](docs/screenshot.png)
+
 Built as a portfolio project targeting roles at companies building conversational AI agents (Affirm, Cresta, CommerceIQ, Maxima).
 
 ---
@@ -11,6 +15,7 @@ Built as a portfolio project targeting roles at companies building conversationa
 - **Agentic loop** — Claude runs in a while loop, calling tools until the issue is resolved. A single user message can trigger multiple sequential tool calls.
 - **Tool use** — 6 tools wired to a real SQLite database and a vector knowledge base.
 - **RAG** — Policy docs chunked, embedded via OpenAI, and stored in ChromaDB. Claude retrieves relevant chunks to answer policy questions accurately.
+- **Real-time agent console** — The UI streams tool calls as they fire, showing inputs and outputs before the final response appears.
 - **Real state mutation** — Refunds actually update the database. Escalations write tickets to a table.
 - **Graceful error handling** — Tools never throw. Errors return structured dicts so Claude can reason over failures and respond naturally.
 
@@ -35,10 +40,11 @@ Built as a portfolio project targeting roles at companies building conversationa
 |---|---|
 | Agent / LLM | Claude claude-sonnet-4-5 via Anthropic API |
 | Embeddings | OpenAI text-embedding-3-small |
-| Vector store | ChromaDB (local persistent) |
+| Vector store | ChromaDB |
 | Backend | Python, FastAPI, uvicorn |
 | Database | SQLite |
 | Frontend | React, Vite |
+| Deployment | Railway (Dockerfile) |
 
 ---
 
@@ -47,22 +53,59 @@ Built as a portfolio project targeting roles at companies building conversationa
 ```
 shopflow-agent/
 ├── backend/
-│   ├── main.py              # FastAPI app, CORS, /chat endpoint
-│   ├── agent.py             # Agentic loop
+│   ├── main.py              # FastAPI app, CORS, /chat + /chat/stream endpoints
+│   ├── agent.py             # Agentic loop + streaming generator
 │   ├── tools.py             # Tool schemas + executor
 │   ├── database.py          # SQLite connection + query helpers
 │   ├── knowledge_base.py    # ChromaDB setup + RAG search
 │   ├── seed.py              # Creates tables and inserts fake data
+│   ├── reset_orders.py      # Resets all orders to original state for demos
 │   └── docs/                # Policy markdown files for RAG
 │       ├── returns_policy.md
 │       ├── shipping_faq.md
 │       └── warranty.md
 └── frontend/
     └── src/
-        ├── App.jsx          # Root component, message state
-        ├── Message.jsx      # Message bubble with tool badges
-        ├── ToolBadge.jsx    # Shows which tools fired
-        └── api.js           # fetch wrapper for POST /chat
+        ├── App.jsx           # Root component, message state, streaming
+        ├── AgentActivity.jsx # Real-time tool call console panel
+        ├── Message.jsx       # Message bubble
+        └── api.js            # SSE streaming fetch wrapper
+```
+
+---
+
+## Demo scenarios
+
+Try these on the [live demo](https://shopflow-agent-production.up.railway.app) — watch the agent console on the right as tools fire in real time.
+
+**Multi-step refund — 2 tool calls in one message**
+```
+My order ORD-1001 is late, can I get a refund?
+```
+
+**Lost package — immediate refund**
+```
+Order ORD-1007 never arrived
+```
+
+**Fraud escalation — immediate high-urgency ticket**
+```
+Someone used my account to place order ORD-1009 without my permission
+```
+
+**Agent pushes back on wrong information**
+```
+I've been waiting 3 weeks for ORD-1003 and I'm going to take legal action
+```
+
+**RAG policy lookup**
+```
+What's your return policy for damaged items?
+```
+
+**Inventory + product info**
+```
+Do you have the wireless headphones in stock? What colors?
 ```
 
 ---
@@ -72,7 +115,7 @@ shopflow-agent/
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 18+
+- Node.js 20+
 - Anthropic API key — [console.anthropic.com](https://console.anthropic.com)
 - OpenAI API key — [platform.openai.com](https://platform.openai.com)
 
@@ -109,40 +152,11 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173)
 
----
+### Reset demo data
 
-## Demo scenarios
-
-These show off the most interesting agent behaviors:
-
-**Multi-step refund — 2 tool calls in one message**
-```
-My order ORD-1001 is late, can I get a refund?
-```
-
-**Lost package — immediate refund**
-```
-Order ORD-1007 never arrived
-```
-
-**Fraud escalation — immediate high-urgency ticket**
-```
-Someone used my account to place order ORD-1009 without my permission
-```
-
-**Agent pushes back on wrong information**
-```
-I've been waiting 3 weeks for ORD-1003 and I'm going to take legal action
-```
-
-**RAG policy lookup**
-```
-What's your return policy for damaged items?
-```
-
-**Inventory + product info**
-```
-Do you have the wireless headphones in stock? What colors?
+```bash
+cd backend
+python reset_orders.py
 ```
 
 ---
@@ -150,23 +164,26 @@ Do you have the wireless headphones in stock? What colors?
 ## Architecture
 
 ```
-User → React UI → POST /chat → FastAPI
-                                  ↓
-                             Agentic loop
-                                  ↓
-                          Claude (tool_use) ←→ Tool executor
-                                                    ↓
-                                          SQLite / ChromaDB
+User → React UI → POST /chat/stream → FastAPI
+                                          ↓
+                                     Agentic loop
+                                          ↓
+                                  Claude (tool_use) ←→ Tool executor
+                                     ↓          ↓
+                              SSE stream      SQLite / ChromaDB
+                                     ↓
+                            Agent console (real-time)
 ```
 
-The agentic loop runs until `stop_reason == "end_turn"`. On each iteration, Claude either returns a final text response or a `tool_use` block. Tool results are appended to the message history and sent back to Claude, which continues reasoning until the issue is resolved.
+The agentic loop runs until `stop_reason == "end_turn"`. On each iteration, Claude either returns a final text response or a `tool_use` block. Tool results are appended to the message history and sent back to Claude. Each tool start and result is streamed to the frontend via SSE so the agent console updates in real time.
 
 ---
 
 ## If I were scaling this
 
 - SQLite → PostgreSQL
-- ChromaDB local → Pinecone or Weaviate
+- ChromaDB → Pinecone or Weaviate
 - Synchronous tool execution → async with timeout guards
 - Single system prompt → prompt versioning and A/B testing
 - No auth → JWT with customer identity passed in context
+- Single agent → multi-agent routing by intent classification
