@@ -17,4 +17,4 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 RUN cd backend && python seed.py
 
 EXPOSE 8000
-CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "cd /app/backend && python3 -m uvicorn main:app --host 0.0.0.0 --port $PORT"]
