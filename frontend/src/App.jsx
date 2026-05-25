@@ -24,6 +24,17 @@ export default function App() {
   const inputRef                  = useRef(null);
 
   useEffect(() => {
+    function setHeight() {
+      document.documentElement.style.setProperty(
+        "--app-height", `${window.innerHeight}px`
+      );
+    }
+    setHeight();
+    window.addEventListener("resize", setHeight);
+    return () => window.removeEventListener("resize", setHeight);
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -86,7 +97,7 @@ export default function App() {
   const isEmpty = messages.length === 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "var(--app-height)" }}>
 
       <style>{`
         .body-inner {

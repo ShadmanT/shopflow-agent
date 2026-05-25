@@ -1,16 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
+:root {
+  --app-height: 100%;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
 
 body {
   background: #0b0d1a;
   color: #e2e6f0;
   font-family: 'Outfit', system-ui, sans-serif;
-  height: 100vh;
-  overflow: hidden;
 }
-
-#root { height: 100vh; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
