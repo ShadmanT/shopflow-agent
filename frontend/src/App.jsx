@@ -109,13 +109,17 @@ export default function App() {
           flex-direction: column;
         }
         @media (max-width: 768px) {
-          .body-inner { flex-direction: column; }
+          .body-inner { flex-direction: column; overflow-y: auto; }
           .chat-panel {
-            flex: 0 0 55%;
+            flex: 0 0 auto;
+            min-height: 50vh;
             border-right: none;
             border-bottom: 1px solid #1a1d2e;
           }
-          .console-panel { flex: 0 0 45%; }
+          .console-panel {
+            flex: 0 0 auto;
+            min-height: 40vh;
+          }
         }
       `}</style>
 
@@ -183,7 +187,7 @@ export default function App() {
                 <div style={{
                   display: "flex", flexDirection: "column",
                   alignItems: "center", justifyContent: "center",
-                  height: "100%", gap: 20, paddingBottom: 40,
+                  paddingTop: 24, gap: 16,
                 }}>
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>🛍</div>
