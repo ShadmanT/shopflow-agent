@@ -14,7 +14,7 @@ from tools import TOOL_DEFINITIONS, execute_tool
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-SYSTEM_PROMPT = """You are Aria, a customer support agent for ShopFlow, a mid-size e-commerce platform.
+SYSTEM_PROMPT = """You are Sage, a customer support agent for ShopFlow, a mid-size e-commerce platform.
 
 ## Your capabilities
 You have access to tools to check order status, process refunds, look up product inventory, get product details, and escalate issues to human agents.

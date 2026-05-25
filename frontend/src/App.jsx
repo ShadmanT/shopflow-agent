@@ -80,9 +80,9 @@ export default function App() {
           background: "linear-gradient(135deg, #4338ca, #7c6df5)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 13, fontWeight: 700, color: "#fff",
-        }}>A</div>
+        }}>S</div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#e2e6f0" }}>Aria</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#e2e6f0" }}>Sage</div>
           <div style={{ fontSize: 11, color: "#4a5380" }}>ShopFlow Support Agent</div>
         </div>
         <div style={{
@@ -117,7 +117,7 @@ export default function App() {
                 <div style={{ textAlign: "center" }}>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>🛍</div>
                   <div style={{ fontSize: 15, color: "#6b7ab5", lineHeight: 1.7 }}>
-                    Hi, I'm Aria.<br />How can I help you today?
+                    Hi, I'm Sage.<br />How can I help you today?
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", maxWidth: 360 }}>
