@@ -150,9 +150,12 @@ def get_product(product_id: str = None, product_name: str = None) -> dict | None
                 "SELECT * FROM products WHERE id = ?", (product_id,)
             ).fetchone()
         elif product_name:
-            row = conn.execute(
-                "SELECT * FROM products WHERE name LIKE ?", (f"%{product_name}%",)
-            ).fetchone()
+            words = product_name.strip().split()
+            query = "SELECT * FROM products WHERE " + " AND ".join(
+                ["LOWER(name) LIKE ?" for _ in words]
+            )
+            params = [f"%{w.lower()}%" for w in words]
+            row = conn.execute(query, params).fetchone()
         else:
             return None
 
@@ -175,9 +178,12 @@ def get_product(product_id: str = None, product_name: str = None) -> dict | None
 def get_inventory(product_id: str = None, product_name: str = None) -> dict | None:
     with get_db() as conn:
         if not product_id and product_name:
-            row = conn.execute(
-                "SELECT id FROM products WHERE name LIKE ?", (f"%{product_name}%",)
-            ).fetchone()
+            words = product_name.strip().split()
+            query = "SELECT id FROM products WHERE " + " AND ".join(
+                ["LOWER(name) LIKE ?" for _ in words]
+            )
+            params = [f"%{w.lower()}%" for w in words]
+            row = conn.execute(query, params).fetchone()
             if not row:
                 return None
             product_id = row["id"]
