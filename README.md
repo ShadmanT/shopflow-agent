@@ -75,6 +75,8 @@ shopflow-agent/
 │   ├── rag_eval.py          # RAG retrieval recall@k eval
 │   ├── rag_cases.json       # Retrieval test queries
 │   ├── compare_prompts.py   # Prompt A/B comparison
+│   ├── validate_judge.py    # Judge-vs-human agreement check
+│   ├── judge_validation/    # Curated labeled samples for validating the judge
 │   ├── prompts/             # Alternate system prompts for A/B
 │   ├── tests/               # Offline unit tests (graders, judge, cases, RAG)
 │   └── results/             # Timestamped JSON results (gitignored)
@@ -247,6 +249,15 @@ python evals/rag_eval.py --k 3
 ```bash
 python evals/compare_prompts.py --category proactiveness
 ```
+
+**Validating the judge against humans** (`validate_judge.py`). An LLM judge is only trustworthy if it agrees with a person, so the judge is itself evaluated. `evals/judge_validation/samples.json` holds a curated set of responses — some good, some deliberately flawed (invented refund amount, fabricated policy, rambling markdown, robotic tone) — each with a `human` score field you fill in. The script judges every sample and reports **exact-match, within-1, and pass/fail agreement** between the judge and your labels per dimension:
+
+```bash
+# 1. Fill the "human" scores (1-5) in evals/judge_validation/samples.json
+# 2. python evals/validate_judge.py
+```
+
+Without labels it still runs and prints the judge's scores next to blank human columns, so you can confirm the judge rates the good samples high and the flawed ones low before labeling. This closes the loop: the deterministic suite checks the agent, the judge checks response quality, and this checks the judge.
 
 ### Continuous integration
 
