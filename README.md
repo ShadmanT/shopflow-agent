@@ -62,6 +62,7 @@ shopflow-agent/
 │   ├── knowledge_base.py    # ChromaDB setup + RAG search
 │   ├── seed.py              # Creates tables and inserts fake data
 │   ├── reset_orders.py      # Resets demo data (wraps seed())
+│   ├── mcp_server.py        # Exposes the 6 tools over the Model Context Protocol
 │   └── docs/                # Policy markdown files for RAG
 │       ├── returns_policy.md
 │       ├── shipping_faq.md
@@ -252,6 +253,50 @@ This keeps per-commit feedback fast and deterministic while still exercising the
 | multi_turn | 3/3 |
 | prompt_injection | 3/3 |
 | off_topic | 3/3 |
+
+---
+
+## MCP server
+
+The same six capabilities Sage uses are also exposed as a **Model Context Protocol (MCP)** server, so any MCP client — Claude Desktop, the Claude Messages API MCP connector, or another agent — can call them without touching ShopFlow's internals.
+
+`backend/mcp_server.py` imports the existing business logic from `database.py` and `knowledge_base.py`, so the refund guards, eligibility rules, and structured error shapes are **identical** whether a tool runs in-process in `agent.py` or over MCP from an external client — one source of truth, not a second copy to keep in sync. The in-process agent is untouched; MCP is a parallel surface.
+
+### Why this matters
+
+The tools stop being welded into one app. When ShopFlow needs the same capabilities in a second place — an internal Claude Desktop assistant for the support team, a Slack bot, a nightly batch agent — each connects to the one server instead of re-implementing six tools (and the refund guards) per surface. Fix the logic once, every consumer gets it; the guardrails live on one server-side boundary rather than in each client's prompt.
+
+### Run it
+
+Seed the database first, then start the server (stdio transport, which Claude Desktop and most MCP clients expect):
+
+```bash
+python backend/seed.py
+python backend/mcp_server.py
+```
+
+Policy search (`search_knowledge_base`) needs `OPENAI_API_KEY` to build the vector store; if it's absent the server still starts and every other tool works, with search returning a clear "unavailable" result.
+
+### Use it from Claude Desktop
+
+Add this to your `claude_desktop_config.json` (use the absolute path to the project's Python interpreter, e.g. the venv's), then restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "shopflow": {
+      "command": "C:\\path\\to\\shopflow-agent\\venv\\Scripts\\python.exe",
+      "args": ["C:\\path\\to\\shopflow-agent\\backend\\mcp_server.py"]
+    }
+  }
+}
+```
+
+You can then ask Claude Desktop things like "what's the status of ORD-1005?" and it will call the ShopFlow tools directly.
+
+### Use it from the Messages API
+
+To let the Claude API call the tools over the MCP connector, host the server over HTTP and pass both halves on the request — `mcp_servers=[{"type": "url", "url": ..., "name": "shopflow"}]` **and** `tools=[{"type": "mcp_toolset", "mcp_server_name": "shopflow"}]` — with the `mcp-client-2025-11-20` beta. (stdio above is for local clients; the API connector needs a reachable URL.)
 
 ---
 
