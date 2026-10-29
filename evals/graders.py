@@ -122,14 +122,22 @@ def check_not_contains(response, substrings) -> dict:
 # ── DB assertions ─────────────────────────────────────────────────────────────
 
 def _order_status(db_path: str, order_id: str):
-    with sqlite3.connect(db_path) as conn:
+    # sqlite3's context manager commits but does not close the connection, which
+    # leaves the file locked on Windows; close it explicitly.
+    conn = sqlite3.connect(db_path)
+    try:
         row = conn.execute("SELECT status FROM orders WHERE id = ?", (order_id,)).fetchone()
+    finally:
+        conn.close()
     return row[0] if row else None
 
 
 def _escalation_count(db_path: str) -> int:
-    with sqlite3.connect(db_path) as conn:
+    conn = sqlite3.connect(db_path)
+    try:
         return conn.execute("SELECT COUNT(*) FROM escalations").fetchone()[0]
+    finally:
+        conn.close()
 
 
 def check_db_assertions(db_path, assertions) -> dict:

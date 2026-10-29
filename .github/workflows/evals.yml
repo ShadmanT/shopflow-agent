@@ -1,0 +1,55 @@
+name: Agent evals
+
+# Runs the REAL agent eval suite against live Claude + OpenAI APIs.
+# This costs money and needs API keys, so it does NOT run on every push.
+# Trigger it manually from the Actions tab, or let the weekly schedule run it.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   ANTHROPIC_API_KEY
+#   OPENAI_API_KEY
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Runs per case"
+        required: false
+        default: "1"
+      threshold:
+        description: "Minimum overall pass rate (0-1)"
+        required: false
+        default: "0.9"
+  schedule:
+    - cron: "0 7 * * 1"  # Mondays 07:00 UTC
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run eval suite
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python evals/run_evals.py \
+            --runs "${{ github.event.inputs.runs || '1' }}" \
+            --threshold "${{ github.event.inputs.threshold || '0.9' }}"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: evals/results/*.json
+          if-no-files-found: ignore

@@ -4,6 +4,8 @@ An AI customer support agent for a fictional e-commerce store, built with Claude
 
 **Live demo: [shopflow-agent-production.up.railway.app](https://shopflow-agent-production.up.railway.app)**
 
+[![CI](https://github.com/ShadmanT/shopflow-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/ShadmanT/shopflow-agent/actions/workflows/ci.yml)
+
 ![ShopFlow Agent](docs/screenshot.png)
 
 Built as a portfolio project targeting roles at companies building conversational AI agents (Affirm, Cresta, CommerceIQ, Maxima).
@@ -68,6 +70,7 @@ shopflow-agent/
 │   ├── cases.json           # Scripted test cases
 │   ├── graders.py           # Deterministic grading functions
 │   ├── run_evals.py         # CLI runner
+│   ├── tests/               # Offline unit tests (graders + cases integrity)
 │   └── results/             # Timestamped JSON results (gitignored)
 └── frontend/
     └── src/
@@ -214,6 +217,20 @@ python evals/run_evals.py --threshold 0.9      # exit non-zero if overall pass r
 ```
 
 Console output shows per-case `PASS`/`FAIL`/`FLAKY` with a failure reason, a by-category table, and the overall pass rate. The process exits non-zero when the overall pass rate is below `--threshold` (default 0.9).
+
+### Continuous integration
+
+The full suite calls live Claude + OpenAI APIs, so running it on every push would be slow, flaky, and cost money. CI is split in two tiers:
+
+- **`ci.yml`** — runs on every push and PR. No API calls: it byte-compiles the code and runs the offline eval-harness tests (grading logic + `cases.json` integrity). This is the gate that catches regressions in the harness itself, for free. Run the same checks locally:
+
+  ```bash
+  python -m unittest discover -s evals/tests -v
+  ```
+
+- **`evals.yml`** — runs the **real** agent eval suite. Triggered manually from the Actions tab (`workflow_dispatch`, with optional `runs`/`threshold` inputs) or on a weekly schedule, using the `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` repository secrets. It enforces the pass-rate threshold via the runner's exit code and uploads the results JSON as a build artifact.
+
+This keeps per-commit feedback fast and deterministic while still exercising the live agent on demand.
 
 ### Latest pass rate
 
