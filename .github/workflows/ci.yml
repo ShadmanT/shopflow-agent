@@ -1,0 +1,29 @@
+name: CI
+
+# Fast, free, deterministic gate that runs on every push and PR.
+# No API calls: it compiles the code and runs the offline eval-harness tests
+# (grading logic + cases.json integrity). The real agent evals — which cost
+# money and hit live APIs — live in evals.yml and run on demand / on a schedule.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  offline-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Byte-compile backend + evals
+        run: |
+          python -m py_compile backend/*.py evals/graders.py evals/run_evals.py
+
+      - name: Run offline eval-harness tests
+        run: |
+          python -m unittest discover -s evals/tests -v

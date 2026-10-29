@@ -59,6 +59,11 @@ def seed():
             ("P-110", "Portable Bluetooth Speaker", "Electronics",
              79.99, "360 sound, IPX7 waterproof, 20hr battery.",
              "black,ocean blue,red", None, 4.6, 1567),
+
+            # Edge case: fully out of stock (every variant 0 -> restock_date populates)
+            ("P-111", "Trail Backpack 40L", "Outdoors",
+             74.99, "Weather-resistant 40L hiking backpack with hydration sleeve and rain cover.",
+             "graphite,forest green", None, 4.6, 312),
         ]
 
         conn.executemany("""
@@ -101,6 +106,10 @@ def seed():
             for color in ["charcoal", "navy", "oatmeal"]:
                 inventory.append(("P-109", size, color, stocks))
 
+        # Trail Backpack — fully out of stock (edge case)
+        for color in ["graphite", "forest green"]:
+            inventory.append(("P-111", None, color, 0))
+
         conn.executemany("""
             INSERT INTO product_inventory (product_id, size, color, stock)
             VALUES (?, ?, ?, ?)
@@ -123,6 +132,15 @@ def seed():
             ("ORD-1013", "Nina Kowalski",   "nina@email.com",    "shipped",    89.99,  "2026-05-19", "2026-05-25", 0),
             ("ORD-1014", "Omar Abdullah",   "omar@email.com",    "lost",       59.99,  "2026-05-11", "2026-05-18", 8),
             ("ORD-1015", "Zoe Tremblay",    "zoe@email.com",     "processing", 109.98, "2026-05-22", "2026-05-29", 0),
+
+            # ── Edge-case orders for eval coverage ────────────────
+            # Refund eligibility boundary: eligible requires days_late > 2
+            ("ORD-1016", "Hannah Schmidt",  "hannah@email.com",  "shipped",    129.99, "2026-05-21", "2026-05-27", 2),  # exactly 2 late -> NOT eligible
+            ("ORD-1017", "Diego Morales",   "diego@email.com",   "shipped",    59.99,  "2026-05-17", "2026-05-23", 3),  # 3 late -> eligible via days_late only
+            ("ORD-1018", "Grace Liu",       "grace@email.com",   "delivered",  49.99,  "2026-05-09", "2026-05-14", 5),  # delivered yet eligible via days_late
+            ("ORD-1019", "Samuel Adeyemi",  "samuel@email.com",  "refunded",   79.99,  "2026-05-07", "2026-05-13", 5),  # refunded + late -> hits already-refunded guard
+            ("ORD-1020", "Isabella Rossi",  "isabella@email.com","cancelled",  24.99,  "2026-05-23", "2026-05-29", 0),  # unusual status -> not eligible
+            ("ORD-1021", "Noah Andersson",  "noah@email.com",    "shipped",    92.97,  "2026-05-20", "2026-05-26", 0),  # multi-item order
         ]
 
         conn.executemany("""
@@ -155,6 +173,15 @@ def seed():
             ("ORD-1014", "P-106", "Laptop Stand Adjustable",              1, 59.99),
             ("ORD-1015", "P-101", "Wireless Noise-Cancelling Headphones", 1, 89.99),
             ("ORD-1015", "P-109", "Merino Wool Crew Socks 3-Pack",        1, 22.99),  # 112.98
+
+            # ── Edge-case order items ─────────────────────────────
+            ("ORD-1016", "P-102", "Mechanical Keyboard TKL",              1, 129.99),
+            ("ORD-1017", "P-106", "Laptop Stand Adjustable",              1, 59.99),
+            ("ORD-1018", "P-104", "Yoga Mat Premium",                     1, 49.99),
+            ("ORD-1019", "P-110", "Portable Bluetooth Speaker",           1, 79.99),
+            ("ORD-1020", "P-107", "Resistance Band Set",                  1, 24.99),
+            ("ORD-1021", "P-105", "Stainless Steel Water Bottle 32oz",    2, 34.99),  # qty 2
+            ("ORD-1021", "P-109", "Merino Wool Crew Socks 3-Pack",        1, 22.99),  # 92.97
         ]
 
         conn.executemany("""
@@ -164,15 +191,23 @@ def seed():
         """, order_items)
 
     print("✓ Tables created")
-    print("✓ 10 products seeded")
-    print("✓ 15 orders seeded (delayed, lost, delivered, processing, shipped, refunded)")
-    print("✓ Inventory seeded with size/color variants")
+    print("✓ 11 products seeded")
+    print("✓ 21 orders seeded (delayed, lost, delivered, processing, shipped, refunded, cancelled)")
+    print("✓ Inventory seeded with size/color variants (incl. one out-of-stock product)")
     print("\nDemo orders to test with:")
     print("  ORD-1001 — delayed 4 days, refund eligible")
     print("  ORD-1005 — delayed 6 days, refund eligible")
     print("  ORD-1007 — lost, refund eligible")
     print("  ORD-1003 — processing, not yet shipped")
     print("  ORD-1008 — already refunded")
+    print("\nEdge-case fixtures (used by the eval suite):")
+    print("  ORD-1016 — shipped, 2 days late -> NOT eligible (boundary)")
+    print("  ORD-1017 — shipped, 3 days late -> eligible via days_late")
+    print("  ORD-1018 — delivered, 5 days late -> eligible via days_late")
+    print("  ORD-1019 — refunded, 5 days late -> already-refunded guard")
+    print("  ORD-1020 — cancelled -> not eligible")
+    print("  ORD-1021 — multi-item order")
+    print("  P-111    — Trail Backpack 40L, fully out of stock")
 
 if __name__ == "__main__":
     seed()
