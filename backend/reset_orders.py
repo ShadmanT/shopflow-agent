@@ -1,27 +1,16 @@
-from database import get_db
+"""Reset the demo database to its original seeded state.
 
-with get_db() as conn:
-    conn.execute("UPDATE orders SET status='delayed',  days_late=4 WHERE id='ORD-1001'")
-    conn.execute("UPDATE orders SET status='delivered',days_late=0 WHERE id='ORD-1002'")
-    conn.execute("UPDATE orders SET status='processing',days_late=0 WHERE id='ORD-1003'")
-    conn.execute("UPDATE orders SET status='shipped',  days_late=0 WHERE id='ORD-1004'")
-    conn.execute("UPDATE orders SET status='delayed',  days_late=6 WHERE id='ORD-1005'")
-    conn.execute("UPDATE orders SET status='delivered',days_late=0 WHERE id='ORD-1006'")
-    conn.execute("UPDATE orders SET status='lost',     days_late=9 WHERE id='ORD-1007'")
-    conn.execute("UPDATE orders SET status='refunded', days_late=0 WHERE id='ORD-1008'")
-    conn.execute("UPDATE orders SET status='shipped',  days_late=0 WHERE id='ORD-1009'")
-    conn.execute("UPDATE orders SET status='processing',days_late=0 WHERE id='ORD-1010'")
-    conn.execute("UPDATE orders SET status='delayed',  days_late=5 WHERE id='ORD-1011'")
-    conn.execute("UPDATE orders SET status='delivered',days_late=0 WHERE id='ORD-1012'")
-    conn.execute("UPDATE orders SET status='shipped',  days_late=0 WHERE id='ORD-1013'")
-    conn.execute("UPDATE orders SET status='lost',     days_late=8 WHERE id='ORD-1014'")
-    conn.execute("UPDATE orders SET status='processing',days_late=0 WHERE id='ORD-1015'")
+This is a thin wrapper around seed() so it can never drift from the
+canonical fixtures in seed.py. Running it rebuilds products, inventory,
+orders, order items, and clears escalations.
 
-    conn.execute("DELETE FROM escalations")
+    python backend/reset_orders.py
+"""
+import os
+import sys
+sys.path.append(os.path.dirname(__file__))
 
-    rows = conn.execute("SELECT id, status FROM orders").fetchall()
-    for r in rows:
-        print(f"  {r['id']} → {r['status']}")
+from seed import seed
 
-    print("\n✓ All orders reset to original state")
-    print("✓ Escalations cleared")
+if __name__ == "__main__":
+    seed()

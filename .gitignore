@@ -7,6 +7,10 @@ venv/
 # Database
 shopflow.db
 
+# Evals
+evals/results/*.json
+evals/shopflow_eval.db
+
 # ChromaDB
 chroma_db/
 
