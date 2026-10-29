@@ -22,7 +22,7 @@ jobs:
 
       - name: Byte-compile backend + evals
         run: |
-          python -m py_compile backend/*.py evals/graders.py evals/run_evals.py
+          python -m py_compile backend/*.py evals/*.py
 
       - name: Run offline eval-harness tests
         run: |

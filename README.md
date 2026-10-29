@@ -70,8 +70,13 @@ shopflow-agent/
 ├── evals/
 │   ├── cases.json           # Scripted test cases
 │   ├── graders.py           # Deterministic grading functions
+│   ├── judge.py             # LLM-as-judge grader (groundedness/tone/conciseness)
 │   ├── run_evals.py         # CLI runner
-│   ├── tests/               # Offline unit tests (graders + cases integrity)
+│   ├── rag_eval.py          # RAG retrieval recall@k eval
+│   ├── rag_cases.json       # Retrieval test queries
+│   ├── compare_prompts.py   # Prompt A/B comparison
+│   ├── prompts/             # Alternate system prompts for A/B
+│   ├── tests/               # Offline unit tests (graders, judge, cases, RAG)
 │   └── results/             # Timestamped JSON results (gitignored)
 └── frontend/
     └── src/
@@ -218,6 +223,30 @@ python evals/run_evals.py --threshold 0.9      # exit non-zero if overall pass r
 ```
 
 Console output shows per-case `PASS`/`FAIL`/`FLAKY` with a failure reason, a by-category table, and the overall pass rate. The process exits non-zero when the overall pass rate is below `--threshold` (default 0.9).
+
+### Beyond pass/fail: judge, retrieval, and A/B
+
+The deterministic suite checks *what the agent did*. Three more tools check *how well it answered* and make prompt changes measurable — the harder, more interesting half of evaluating an agent.
+
+**LLM-as-judge** (`--judge`). Deterministic checks can't tell you whether an answer invented a refund amount or sounded robotic. The judge has Claude score each response 1–5 on **groundedness** (every factual claim is backed by a tool result — nothing hallucinated), **tone**, and **conciseness**, graded against the tool results the agent actually saw. It's opt-in because it costs extra API calls:
+
+```bash
+python evals/run_evals.py --category policy_kb --judge
+```
+
+A run passes the judge only if every dimension meets `--judge-threshold` (default 4). Scores are saved per-run and averaged by dimension in the summary. (`judge.py`'s parser is unit-tested offline; a sample policy answer scores 5/5/5.)
+
+**RAG retrieval eval** (`rag_eval.py`). Grades the retrieval layer on its own: for each query, is the needed chunk in the top-k results (recall@k), and from the expected doc? A low score here means no prompt can fix the answer. Latest: **recall@3 = 100% (10/10)**, source accuracy 100%.
+
+```bash
+python evals/rag_eval.py --k 3
+```
+
+**Prompt A/B comparison** (`compare_prompts.py`). Runs the whole suite against two system prompts and diffs the pass rates by category — the regression harness the project was built for. The bundled variant deliberately reintroduces "ask the customer before acting"; the eval catches it immediately, dropping **proactiveness from 100% to 0%**:
+
+```bash
+python evals/compare_prompts.py --category proactiveness
+```
 
 ### Continuous integration
 

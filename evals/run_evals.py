@@ -10,14 +10,17 @@ Usage (PowerShell on Windows works as-is):
     python evals/run_evals.py --case refund_happy_path_1001
     python evals/run_evals.py --category escalation --runs 3
     python evals/run_evals.py --runs 3 --threshold 0.9
+    python evals/run_evals.py --judge                 # add LLM-as-judge scoring
 
 Behavior:
   * Resets a dedicated eval DB with seed() before every run, so cases are
     independent and your dev shopflow.db is never touched.
-  * Captures tool names AND arguments by wrapping the agent's tool executor,
-    plus token usage by wrapping the Anthropic client.
-  * Saves full results (inputs, tool calls, args, response, grades, latency,
-    tokens) to evals/results/<timestamp>.json.
+  * Captures tool names, arguments AND results by wrapping the agent's tool
+    executor, plus token usage by wrapping the Anthropic client.
+  * With --judge, an LLM grades each response for groundedness, tone, and
+    conciseness (extra API calls — opt-in). See evals/judge.py.
+  * Saves full results (inputs, tool calls, args, results, response, grades,
+    judge scores, latency, tokens) to evals/results/<timestamp>.json.
   * Exits non-zero if the overall pass rate is below --threshold (for CI).
 
 API keys are loaded from .env by the agent module. They are never printed.
@@ -72,7 +75,7 @@ def _require_keys() -> None:
         sys.exit(2)
 
 
-def _bootstrap():
+def bootstrap():
     """
     Point the DB at a dedicated eval file, then import seed + agent and
     install instrumentation. Returns (seed_fn, agent_module, state) where
@@ -86,12 +89,14 @@ def _bootstrap():
 
     state = {"tool_calls": [], "usage": {"input_tokens": 0, "output_tokens": 0}}
 
-    # Wrap the tool executor to capture names + arguments.
+    # Wrap the tool executor to capture names, arguments AND results. The result
+    # is what the agent saw, so the judge can check groundedness against it.
     _real_execute = agent.execute_tool
 
     def _recording_execute(name, inputs):
-        state["tool_calls"].append({"name": name, "input": inputs})
-        return _real_execute(name, inputs)
+        result = _real_execute(name, inputs)
+        state["tool_calls"].append({"name": name, "input": inputs, "result": result})
+        return result
 
     agent.execute_tool = _recording_execute
 
@@ -154,62 +159,70 @@ def run_one(agent, state, seed_fn, case):
     }
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Run the ShopFlow Agent eval suite.")
-    parser.add_argument("--case", help="Run a single case by id")
-    parser.add_argument("--category", help="Run only cases in this category")
-    parser.add_argument("--runs", type=int, default=1, help="Runs per case (default 1)")
-    parser.add_argument("--threshold", type=float, default=0.9,
-                        help="Min overall pass rate for exit code 0 (default 0.9)")
-    args = parser.parse_args()
-
-    _require_keys()
-
-    cases = load_cases(args.case, args.category)
-    if not cases:
-        print("No cases matched the given filters.")
-        sys.exit(2)
-
+def run_suite(cases, runs, agent, state, seed_fn, *, judge=False, judge_threshold=4,
+              system_prompt=None, verbose=True):
+    """
+    Run every case `runs` times, grade each run, optionally judge it, and return
+    a summary dict. Shared by the CLI and the prompt A/B comparison script.
+    """
     import graders
+    judgemod = None
+    if judge:
+        import judge as judgemod
 
-    print(f"Bootstrapping agent (building knowledge base, pointing DB at eval copy)...\n")
-    seed_fn, agent, state = _bootstrap()
+    if system_prompt is not None:
+        agent.SYSTEM_PROMPT = system_prompt
 
     results = []
     cat_totals = defaultdict(lambda: {"passed": 0, "total": 0})
+    judge_scores = defaultdict(list)  # dimension -> [scores]
     total_passed = total_runs = 0
-
-    print(f"Running {len(cases)} case(s) x {args.runs} run(s) = {len(cases) * args.runs} agent conversation(s)\n")
-    print("=" * 78)
 
     for case in cases:
         run_records = []
         case_passed = 0
 
-        for _ in range(args.runs):
+        for _ in range(runs):
             run = run_one(agent, state, seed_fn, case)
             grade = graders.grade_run(case, run, EVAL_DB_PATH)
             run["grade"] = grade
-            run_records.append(run)
+            det_pass = grade["passed"] and run["error"] is None
 
-            passed = grade["passed"] and run["error"] is None
+            judge_pass = True
+            if judge and run["error"] is None:
+                verdict = judgemod.judge_run(case, run, threshold=judge_threshold)
+                run["judge"] = verdict
+                # A judge infrastructure error (parse/API) does not fail the run.
+                if verdict.get("passed") is False:
+                    judge_pass = False
+                for dim, sc in verdict.get("scores", {}).items():
+                    judge_scores[dim].append(sc["score"])
+
+            passed = det_pass and judge_pass
             case_passed += int(passed)
             total_passed += int(passed)
             total_runs += 1
             cat_totals[case["category"]]["passed"] += int(passed)
             cat_totals[case["category"]]["total"] += 1
+            run_records.append(run)
 
-        rate = case_passed / args.runs
-        status = "PASS" if rate == 1.0 else ("FAIL" if rate == 0.0 else "FLAKY")
-        rate_str = f"{case_passed}/{args.runs}"
-        print(f"[{status:5}] {rate_str:>5}  {case['id']}  ({case['category']})")
-
-        # Show a failure reason from the first non-passing run.
-        for run in run_records:
-            if not (run["grade"]["passed"] and run["error"] is None):
-                reason = run["error"] or graders.failed_reasons(run["grade"])
-                print(f"         -> {reason}")
-                break
+        rate = case_passed / runs
+        if verbose:
+            status = "PASS" if rate == 1.0 else ("FAIL" if rate == 0.0 else "FLAKY")
+            line = f"[{status:5}] {case_passed}/{runs:<2}  {case['id']}  ({case['category']})"
+            if judge:
+                jline = _judge_label(run_records)
+                if jline:
+                    line += f"  {jline}"
+            print(line)
+            for run in run_records:
+                if not (run["grade"]["passed"] and run["error"] is None):
+                    print(f"         -> {run['error'] or graders.failed_reasons(run['grade'])}")
+                    break
+                jv = run.get("judge")
+                if jv and jv.get("passed") is False:
+                    print(f"         -> judge: {jv.get('summary', 'below threshold')}")
+                    break
 
         results.append({
             "id": case["id"],
@@ -220,19 +233,79 @@ def main():
             "pass_rate": rate,
         })
 
+    return {
+        "results": results,
+        "cat_totals": cat_totals,
+        "judge_scores": judge_scores,
+        "total_passed": total_passed,
+        "total_runs": total_runs,
+        "overall": total_passed / total_runs if total_runs else 0.0,
+    }
+
+
+def _judge_label(run_records):
+    """Compact 'judge: g4 t5 c5' label from the first judged run."""
+    for run in run_records:
+        jv = run.get("judge")
+        if jv and jv.get("scores"):
+            return "judge: " + " ".join(
+                f"{dim[0]}{sc['score']}" for dim, sc in jv["scores"].items()
+            )
+    return ""
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Run the ShopFlow Agent eval suite.")
+    parser.add_argument("--case", help="Run a single case by id")
+    parser.add_argument("--category", help="Run only cases in this category")
+    parser.add_argument("--runs", type=int, default=1, help="Runs per case (default 1)")
+    parser.add_argument("--threshold", type=float, default=0.9,
+                        help="Min overall pass rate for exit code 0 (default 0.9)")
+    parser.add_argument("--judge", action="store_true",
+                        help="Also grade responses with an LLM judge (extra API calls)")
+    parser.add_argument("--judge-threshold", type=int, default=4,
+                        help="Min judge score (1-5) per dimension to pass (default 4)")
+    args = parser.parse_args()
+
+    _require_keys()
+
+    cases = load_cases(args.case, args.category)
+    if not cases:
+        print("No cases matched the given filters.")
+        sys.exit(2)
+
+    print("Bootstrapping agent (building knowledge base, pointing DB at eval copy)...\n")
+    seed_fn, agent, state = bootstrap()
+
+    n = len(cases) * args.runs
+    judge_note = " + LLM judge" if args.judge else ""
+    print(f"Running {len(cases)} case(s) x {args.runs} run(s) = {n} agent conversation(s){judge_note}\n")
+    print("=" * 78)
+
+    summary = run_suite(cases, args.runs, agent, state, seed_fn,
+                        judge=args.judge, judge_threshold=args.judge_threshold)
+
     print("=" * 78)
 
     # ── Summary by category ──────────────────────────────────────────────────
     print("\nBy category:")
     print(f"  {'category':<24} {'pass rate':>10}")
     print(f"  {'-' * 24} {'-' * 10}")
-    for cat in sorted(cat_totals):
-        t = cat_totals[cat]
+    for cat in sorted(summary["cat_totals"]):
+        t = summary["cat_totals"][cat]
         pct = t["passed"] / t["total"] if t["total"] else 0.0
         print(f"  {cat:<24} {t['passed']:>3}/{t['total']:<3} {pct:>6.0%}")
 
-    overall = total_passed / total_runs if total_runs else 0.0
-    print(f"\nOverall pass rate: {total_passed}/{total_runs} = {overall:.1%}")
+    if args.judge and summary["judge_scores"]:
+        print("\nLLM-judge average scores (1-5):")
+        for dim in sorted(summary["judge_scores"]):
+            scores = summary["judge_scores"][dim]
+            avg = sum(scores) / len(scores) if scores else 0.0
+            print(f"  {dim:<16} {avg:>4.2f}  (n={len(scores)})")
+
+    overall = summary["overall"]
+    tp, tr = summary["total_passed"], summary["total_runs"]
+    print(f"\nOverall pass rate: {tp}/{tr} = {overall:.1%}")
     print(f"Threshold: {args.threshold:.0%}  ->  {'PASS' if overall >= args.threshold else 'FAIL'}")
 
     # ── Save full results ────────────────────────────────────────────────────
@@ -243,9 +316,10 @@ def main():
         "timestamp": datetime.now().isoformat(),
         "runs_per_case": args.runs,
         "threshold": args.threshold,
+        "judge": args.judge,
         "overall_pass_rate": overall,
-        "by_category": {c: dict(v) for c, v in cat_totals.items()},
-        "cases": results,
+        "by_category": {c: dict(v) for c, v in summary["cat_totals"].items()},
+        "cases": summary["results"],
     }
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
