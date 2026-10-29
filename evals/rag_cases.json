@@ -1,0 +1,52 @@
+[
+  {
+    "query": "How many days do I have to return an item?",
+    "expect_contains": ["30 days"],
+    "expect_source": "returns_policy.md"
+  },
+  {
+    "query": "Is there a fee for returning something?",
+    "expect_contains": ["6.99"],
+    "expect_source": "returns_policy.md"
+  },
+  {
+    "query": "My item arrived damaged, what do I do?",
+    "expect_contains": ["7 days"],
+    "expect_source": "returns_policy.md"
+  },
+  {
+    "query": "How long does standard shipping take?",
+    "expect_contains": ["5-7 business days"],
+    "expect_source": "shipping_faq.md"
+  },
+  {
+    "query": "Tracking says delivered but I never got my package",
+    "expect_contains": ["24 hours"],
+    "expect_source": "shipping_faq.md"
+  },
+  {
+    "query": "Do you ship internationally and how long does it take?",
+    "expect_contains": ["10-14 business days"],
+    "expect_source": "shipping_faq.md"
+  },
+  {
+    "query": "How long is the standard warranty?",
+    "expect_contains": ["1-year"],
+    "expect_source": "warranty.md"
+  },
+  {
+    "query": "Are batteries covered under warranty?",
+    "expect_contains": ["6 months"],
+    "expect_source": "warranty.md"
+  },
+  {
+    "query": "How long are charging cables and adapters covered?",
+    "expect_contains": ["90 days"],
+    "expect_source": "warranty.md"
+  },
+  {
+    "query": "Do ShopFlow Plus members get a longer warranty?",
+    "expect_contains": ["2-year"],
+    "expect_source": "warranty.md"
+  }
+]
