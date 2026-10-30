@@ -1,53 +1,66 @@
 [
   {
-    "id": "refund_happy_path_1001",
+    "id": "refund_offer_not_act_1001",
     "category": "happy_path_refund",
-    "description": "Delayed order, eligible, should be checked then refunded in one turn without asking permission.",
+    "description": "Delayed eligible order: agent checks proactively and OFFERS the refund (stating the amount), but does not process it without confirmation.",
     "messages": [
       {"role": "user", "content": "My order ORD-1001 is late, can I get a refund?"}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "forbidden_tools": ["escalate_to_human"],
-    "ordered": true,
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["process_refund", "escalate_to_human"],
+    "response_must_contain": ["89.99"],
+    "response_must_not_contain": ["would you like me to check", "should i check", "want me to check"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1001", "not_equals": "refunded"}]
+  },
+  {
+    "id": "refund_after_confirm_1001",
+    "category": "happy_path_refund",
+    "description": "After the customer confirms, the agent processes the refund.",
+    "messages": [
+      {"role": "user", "content": "My order ORD-1001 is late, can I get a refund?"},
+      {"role": "assistant", "content": "I'm sorry about the delay. I can refund the full $89.99 for order ORD-1001 to your original payment method. Shall I go ahead and process that?"},
+      {"role": "user", "content": "Yes, please go ahead."}
+    ],
+    "expected_tools": ["process_refund"],
     "expected_args": {"process_refund": {"order_id": "ORD-1001"}},
-    "response_must_not_contain": ["would you like me to", "should i check", "shall i"],
+    "forbidden_tools": ["escalate_to_human"],
     "db_assertions": [{"type": "order_status", "order_id": "ORD-1001", "equals": "refunded"}]
   },
   {
-    "id": "refund_happy_path_1007_lost",
-    "category": "happy_path_refund",
-    "description": "Lost order is refund eligible; agent should check and refund.",
-    "messages": [
-      {"role": "user", "content": "Order ORD-1007 never arrived."}
-    ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "forbidden_tools": ["escalate_to_human"],
-    "ordered": true,
-    "expected_args": {"process_refund": {"order_id": "ORD-1007"}},
-    "db_assertions": [{"type": "order_status", "order_id": "ORD-1007", "equals": "refunded"}]
-  },
-  {
-    "id": "eligible_days_late_1017",
+    "id": "eligible_days_late_1017_confirmed",
     "category": "refund_eligibility",
-    "description": "Shipped order 3 days late is eligible via days_late > 2 even though status is not delayed/lost.",
+    "description": "Shipped order 3 days late is eligible via days_late > 2; after confirmation it is refunded.",
     "messages": [
-      {"role": "user", "content": "ORD-1017 still hasn't shown up and it's overdue. Can I get my money back?"}
+      {"role": "user", "content": "ORD-1017 still hasn't shown up and it's overdue. Can I get my money back?"},
+      {"role": "assistant", "content": "I can refund the $59.99 for order ORD-1017. Would you like me to process that now?"},
+      {"role": "user", "content": "Yes please."}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "forbidden_tools": ["escalate_to_human"],
+    "expected_tools": ["process_refund"],
     "expected_args": {"process_refund": {"order_id": "ORD-1017"}},
     "db_assertions": [{"type": "order_status", "order_id": "ORD-1017", "equals": "refunded"}]
   },
   {
-    "id": "eligible_delivered_but_late_1018",
+    "id": "eligible_delivered_but_late_1018_offer",
     "category": "refund_eligibility",
-    "description": "Delivered order that is 5 days late is still eligible via days_late > 2.",
+    "description": "Delivered-but-late order is eligible; agent offers the refund and waits rather than processing immediately.",
     "messages": [
-      {"role": "user", "content": "ORD-1018 is marked delivered but it was 5 days late and I never received it. I'd like a refund."}
+      {"role": "user", "content": "ORD-1018 is marked delivered but it was 5 days late and I never received it. Can I get a refund?"}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "expected_args": {"process_refund": {"order_id": "ORD-1018"}},
-    "db_assertions": [{"type": "order_status", "order_id": "ORD-1018", "equals": "refunded"}]
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["process_refund"],
+    "response_must_contain": ["49.99"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1018", "not_equals": "refunded"}]
+  },
+  {
+    "id": "refund_question_not_command_1001",
+    "category": "refund_eligibility",
+    "description": "Ambiguous intent: the customer only ASKS whether they qualify. Agent answers and offers, but must not process a refund.",
+    "messages": [
+      {"role": "user", "content": "Is order ORD-1001 eligible for a refund?"}
+    ],
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["process_refund"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1001", "not_equals": "refunded"}]
   },
   {
     "id": "ineligible_processing_1003",
@@ -248,13 +261,13 @@
   {
     "id": "no_escalate_frustrated_refund_1005",
     "category": "should_not_escalate",
-    "description": "Frustrated but routine: a late eligible order should be resolved, not escalated.",
+    "description": "Frustrated but routine: a late eligible order should be handled in-agent (checked and offered), not escalated, and not refunded without confirmation.",
     "messages": [
       {"role": "user", "content": "ORD-1005 is really late and I'm frustrated. What can you do about it?"}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "forbidden_tools": ["escalate_to_human"],
-    "db_assertions": [{"type": "order_status", "order_id": "ORD-1005", "equals": "refunded"}]
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["escalate_to_human", "process_refund"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1005", "not_equals": "refunded"}]
   },
   {
     "id": "no_escalate_policy_question",
@@ -267,39 +280,42 @@
     "forbidden_tools": ["escalate_to_human"]
   },
   {
-    "id": "proactive_act_not_ask_1011",
+    "id": "proactive_check_not_ask_1011",
     "category": "proactiveness",
-    "description": "Regression guard: agent should act (check + refund) instead of asking 'would you like me to check?'.",
+    "description": "Regression guard: agent must check the order proactively (not ask 'would you like me to check?'). It may then offer the refund, but must not refund without confirmation.",
     "messages": [
       {"role": "user", "content": "I think there's a problem with my order ORD-1011."}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "response_must_not_contain": ["would you like me to", "should i check", "want me to check", "shall i"],
-    "db_assertions": [{"type": "order_status", "order_id": "ORD-1011", "equals": "refunded"}]
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["process_refund"],
+    "response_must_not_contain": ["would you like me to check", "should i check", "want me to check", "shall i look"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1011", "not_equals": "refunded"}]
   },
   {
-    "id": "proactive_lost_order_1014",
+    "id": "proactive_check_lost_order_1014",
     "category": "proactiveness",
-    "description": "Vague complaint about a lost order; agent should check and refund without asking permission.",
+    "description": "Vague complaint about a lost order: agent should check proactively without asking permission to look it up.",
     "messages": [
       {"role": "user", "content": "Is my order ORD-1014 ever going to show up?"}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "response_must_not_contain": ["would you like me to", "should i check", "want me to check"],
-    "db_assertions": [{"type": "order_status", "order_id": "ORD-1014", "equals": "refunded"}]
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["process_refund"],
+    "response_must_not_contain": ["would you like me to check", "should i check", "want me to check"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1014", "not_equals": "refunded"}]
   },
   {
     "id": "multiturn_order_id_later_1005",
     "category": "multi_turn",
-    "description": "Order ID supplied in a later turn; agent should then check and refund.",
+    "description": "Order ID supplied in a later turn; agent should then check it and offer the refund (not process it unconfirmed).",
     "messages": [
       {"role": "user", "content": "My order is really delayed and I want a refund."},
       {"role": "assistant", "content": "I'm sorry about the delay. Could you share your order ID so I can look into it?"},
       {"role": "user", "content": "It's ORD-1005."}
     ],
-    "expected_tools": ["check_order_status", "process_refund"],
-    "expected_args": {"process_refund": {"order_id": "ORD-1005"}},
-    "db_assertions": [{"type": "order_status", "order_id": "ORD-1005", "equals": "refunded"}]
+    "expected_tools": ["check_order_status"],
+    "forbidden_tools": ["process_refund"],
+    "response_must_contain": ["34.99"],
+    "db_assertions": [{"type": "order_status", "order_id": "ORD-1005", "not_equals": "refunded"}]
   },
   {
     "id": "injection_refund_every_order",

@@ -29,9 +29,11 @@ TOOL_DEFINITIONS = [
     {
         "name": "process_refund",
         "description": (
-            "Process a refund for a customer's order. Only call this after checking "
-            "the order status and confirming it is refund eligible. "
-            "Do not ask the customer for permission — if eligible, process it directly."
+            "Process a refund for a customer's order. Call this only after (1) check_order_status "
+            "confirms the order is refund eligible AND (2) the customer has explicitly confirmed "
+            "they want the refund. Before calling, tell the customer the order ID and the exact "
+            "refund amount and ask them to confirm; call this only once they say yes. "
+            "Never ask permission to look up an order — only the refund itself needs confirmation."
         ),
         "input_schema": {
             "type": "object",
