@@ -14,7 +14,7 @@
        "result": {"success": true, "refund_id": "REF-20261029-1001", "amount": 89.99, "message": "Refund will appear in 3-5 business days"}}
     ],
     "response": "I'm sorry your order has been delayed. I've gone ahead and processed a full refund of $89.99 to your original payment method, and it should appear within 3-5 business days. Your refund confirmation is REF-20261029-1001.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 5, "conciseness": 5}
   },
   {
     "id": "good_policy_return_window",
@@ -25,7 +25,7 @@
        "result": {"results": [{"content": "Items can be returned within 30 days of delivery for a full refund. Items must be unused and in original packaging.", "source": "returns_policy.md", "relevance": 0.82}]}}
     ],
     "response": "You can return items within 30 days of delivery for a full refund, as long as they're unused and in the original packaging. Let me know if you'd like help starting a return.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 5, "conciseness": 5}
   },
   {
     "id": "good_escalation_fraud",
@@ -36,7 +36,7 @@
        "result": {"ticket_id": "TKT-20261029120000", "urgency": "high", "estimated_response_time": "1 hour"}}
     ],
     "response": "That's concerning and I want to get it handled quickly. I've escalated this to our security team as a high-priority case (ticket TKT-20261029120000); they'll reach out within the hour to secure your account and review order ORD-1009.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 5, "conciseness": 5}
   },
   {
     "id": "good_inventory",
@@ -47,7 +47,7 @@
        "result": {"product_name": "Wireless Noise-Cancelling Headphones", "total_stock": 25, "variants": [{"color": "black", "stock": 18}, {"color": "white", "stock": 7}, {"color": "midnight blue", "stock": 0}]}}
     ],
     "response": "Yes, we have 25 Wireless Noise-Cancelling Headphones in stock: 18 in black and 7 in white. Midnight blue is currently sold out.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 5, "conciseness": 5}
   },
   {
     "id": "good_ineligible_decline",
@@ -58,7 +58,7 @@
        "result": {"order_id": "ORD-1003", "status": "processing", "order_total": 49.99, "days_late": 0, "refund_eligible": false}}
     ],
     "response": "I checked order ORD-1003 and it's still processing and on schedule, so it isn't eligible for a refund right now. If it ends up delayed or doesn't arrive, reach out and I'll make it right.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 4, "conciseness": 5}
   },
   {
     "id": "bad_hallucinated_amount",
@@ -75,7 +75,7 @@
        "result": {"success": true, "refund_id": "REF-20261029-1001", "amount": 89.99}}
     ],
     "response": "Done! I've refunded $150.00 to your card, which should post later today. Thanks for your patience!",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 2, "tone": 5, "conciseness": 5}
   },
   {
     "id": "bad_invented_policy",
@@ -86,7 +86,7 @@
        "result": {"results": [{"content": "Items can be returned within 30 days of delivery for a full refund.", "source": "returns_policy.md", "relevance": 0.82}]}}
     ],
     "response": "No problem at all! You have a full 60 days from delivery to return anything, and we even cover return shipping on every order.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 1, "tone": 5, "conciseness": 5}
   },
   {
     "id": "bad_rambling_markdown",
@@ -97,12 +97,16 @@
        "result": {"results": [{"content": "Items can be returned within 30 days of delivery for a full refund. Items must be unused and in original packaging.", "source": "returns_policy.md", "relevance": 0.82}]}}
     ],
     "response": "Great question! Here is a comprehensive overview of our return policy:\n\n## Return Window\n- You have **30 days** from the date of delivery.\n- The item must be **unused**.\n- The item must be in its **original packaging**.\n\n## Next Steps\n1. Contact our support team.\n2. We will email you a prepaid label.\n3. Ship the item back.\n\nPlease don't hesitate to reach out if you have any other questions, we are always happy to help and truly value your business!",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 4, "conciseness": 1}
   },
   {
     "id": "bad_robotic_cold",
-    "note": "Correct but curt and robotic, no empathy. Expected LOW tone.",
-    "messages": [{"role": "user", "content": "I'm really upset, ORD-1005 is super late and I need my money back."}],
+    "note": "Refund processed after confirmation, but the reply is curt and robotic with no empathy. Expected LOW tone.",
+    "messages": [
+      {"role": "user", "content": "I'm really upset, ORD-1005 is super late and I need my money back."},
+      {"role": "assistant", "content": "I can refund the $34.99 for order ORD-1005. Want me to process that?"},
+      {"role": "user", "content": "Yes, do it."}
+    ],
     "tool_calls": [
       {"name": "check_order_status", "input": {"order_id": "ORD-1005"},
        "result": {"order_id": "ORD-1005", "status": "delayed", "order_total": 34.99, "days_late": 6, "refund_eligible": true}},
@@ -110,7 +114,7 @@
        "result": {"success": true, "refund_id": "REF-20261029-1005", "amount": 34.99}}
     ],
     "response": "Refund processed. Amount: 34.99. ID: REF-20261029-1005. Anything else.",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 5, "tone": 2, "conciseness": 5}
   },
   {
     "id": "bad_hallucinated_order",
@@ -121,6 +125,6 @@
        "result": {"error": "No order found with ID 'ORD-9999'", "suggestion": "Ask the customer to double-check their order ID"}}
     ],
     "response": "Order ORD-9999 shipped on Monday and is out for delivery today, so you should have it by this evening!",
-    "human": {"groundedness": null, "tone": null, "conciseness": null}
+    "human": {"groundedness": 1, "tone": 5, "conciseness": 5}
   }
 ]
