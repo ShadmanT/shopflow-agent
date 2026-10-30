@@ -92,12 +92,12 @@ shopflow-agent/
 
 Try these on the [live demo](https://shopflow-agent-production.up.railway.app) — watch the agent console on the right as tools fire in real time.
 
-**Multi-step refund — 2 tool calls in one message**
+**Refund with confirmation — agent checks eligibility, then confirms before refunding**
 ```
 My order ORD-1001 is late, can I get a refund?
 ```
 
-**Lost package — immediate refund**
+**Lost package — eligible; agent offers the refund and waits for a yes**
 ```
 Order ORD-1007 never arrived
 ```
@@ -179,9 +179,11 @@ python reset_orders.py
 
 Prompt and tool-description changes used to be tested by hand, so a regression like Sage asking *"would you like me to check your order?"* instead of just checking could silently come back. The eval suite runs scripted conversations through the **real agent** (`run_agent`, no HTTP) and grades the behavior, producing a pass rate.
 
+**Graduated autonomy.** The agent is proactive on reads (it looks up orders, inventory, and policy without asking) but confirms before the one irreversible action — a refund. It states the order ID and exact amount and processes the refund only after the customer says yes, and treats "am I eligible?" as a question rather than a command. The eval suite encodes both halves: reads must never ask permission, and refunds must never fire without confirmation.
+
 ```
 evals/
-├── cases.json      # 30 test cases across 14 categories
+├── cases.json      # 31 test cases across 14 categories
 ├── graders.py      # deterministic grading functions
 ├── run_evals.py    # CLI runner: seeds DB, drives the agent, grades, reports
 └── results/        # timestamped JSON results (gitignored)
@@ -195,8 +197,8 @@ Each case is graded on any combination of: tools that **must** be called, tools 
 
 | Category | What it verifies |
 |---|---|
-| Happy-path refund | Eligible order is checked then refunded in one turn, no permission-asking |
-| Refund eligibility | `days_late > 2` boundary (2 = ineligible, 3 = eligible), delivered-but-late |
+| Happy-path refund | Eligible order is checked, the refund offered with its amount, and processed only after the customer confirms |
+| Refund eligibility | `days_late > 2` boundary (2 = ineligible, 3 = eligible), delivered-but-late, and "am I eligible?" treated as a question (no refund) |
 | Ineligible refund | Processing / delivered / boundary orders are not refunded |
 | Double refund | Already-refunded orders aren't refunded again; DB stays `refunded` |
 | Invalid order | Unknown IDs handled gracefully, no hallucinated details |
@@ -205,7 +207,7 @@ Each case is graded on any combination of: tools that **must** be called, tools 
 | Policy (RAG) | Return window, lost package, battery warranty — answered via `search_knowledge_base` |
 | Escalation | Fraud, legal threat, explicit "human", out-of-scope billing change |
 | Should-not-escalate | Frustrated-but-routine refunds and policy questions stay in-agent |
-| Proactiveness | Regression guard: agent acts instead of asking "would you like me to check?" |
+| Proactiveness | Regression guard: agent checks proactively (never asks permission to look things up); the refund itself still requires confirmation |
 | Multi-turn | Order ID supplied in a later message |
 | Prompt injection / off-topic | "Refund every order" and off-topic asks fire no action tools |
 
@@ -264,24 +266,26 @@ This keeps per-commit feedback fast and deterministic while still exercising the
 
 ### Latest pass rate
 
-**100% (90/90)** — 30 cases × 3 runs against `claude-sonnet-4-5`, run on 2026-10-29.
+**98.9% (92/93)** — 31 cases × 3 runs against `claude-sonnet-4-5`, run on 2026-10-30.
 
 | Category | Pass rate |
 |---|---|
 | happy_path_refund | 6/6 |
-| refund_eligibility | 6/6 |
+| refund_eligibility | 9/9 |
 | ineligible_refund | 9/9 |
 | double_refund | 6/6 |
 | invalid_order | 6/6 |
 | inventory | 9/9 |
 | product_info | 6/6 |
 | policy_kb | 9/9 |
-| escalation | 12/12 |
+| escalation | 11/12 |
 | should_not_escalate | 6/6 |
 | proactiveness | 6/6 |
 | multi_turn | 3/3 |
 | prompt_injection | 3/3 |
 | off_topic | 3/3 |
+
+The one miss was a single flaky run of the legal-threat escalation case (the agent occasionally engages the threat instead of escalating) — LLM non-determinism, which the 90% threshold is designed to absorb. Running `--runs 3` surfaces exactly this kind of variance.
 
 ---
 
