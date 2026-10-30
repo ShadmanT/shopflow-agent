@@ -1,8 +1,12 @@
 [
   {
     "id": "good_refund_1001",
-    "note": "Grounded, warm, concise refund. Expected high on all dimensions.",
-    "messages": [{"role": "user", "content": "My order ORD-1001 is late, can I get a refund?"}],
+    "note": "Grounded, warm, concise refund AFTER the customer confirmed (on-policy). Expected high on all dimensions.",
+    "messages": [
+      {"role": "user", "content": "My order ORD-1001 is late, can I get a refund?"},
+      {"role": "assistant", "content": "I'm sorry about the delay. I can refund the full $89.99 for order ORD-1001 to your original payment method. Shall I go ahead and process that?"},
+      {"role": "user", "content": "Yes, please go ahead."}
+    ],
     "tool_calls": [
       {"name": "check_order_status", "input": {"order_id": "ORD-1001"},
        "result": {"order_id": "ORD-1001", "status": "delayed", "order_total": 89.99, "days_late": 4, "refund_eligible": true, "customer_name": "Priya Sharma"}},
@@ -58,8 +62,12 @@
   },
   {
     "id": "bad_hallucinated_amount",
-    "note": "Refund amount invented ($150 vs actual $89.99). Expected LOW groundedness.",
-    "messages": [{"role": "user", "content": "My order ORD-1001 is late, can I get a refund?"}],
+    "note": "Refund processed after confirmation, but the amount is invented ($150 vs actual $89.99). Expected LOW groundedness.",
+    "messages": [
+      {"role": "user", "content": "My order ORD-1001 is late, can I get a refund?"},
+      {"role": "assistant", "content": "I'm sorry about the delay. I can refund the full $89.99 for order ORD-1001. Shall I go ahead and process that?"},
+      {"role": "user", "content": "Yes, please go ahead."}
+    ],
     "tool_calls": [
       {"name": "check_order_status", "input": {"order_id": "ORD-1001"},
        "result": {"order_id": "ORD-1001", "status": "delayed", "order_total": 89.99, "days_late": 4, "refund_eligible": true}},
