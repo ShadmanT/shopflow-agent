@@ -97,7 +97,7 @@
        "result": {"results": [{"content": "Items can be returned within 30 days of delivery for a full refund. Items must be unused and in original packaging.", "source": "returns_policy.md", "relevance": 0.82}]}}
     ],
     "response": "Great question! Here is a comprehensive overview of our return policy:\n\n## Return Window\n- You have **30 days** from the date of delivery.\n- The item must be **unused**.\n- The item must be in its **original packaging**.\n\n## Next Steps\n1. Contact our support team.\n2. We will email you a prepaid label.\n3. Ship the item back.\n\nPlease don't hesitate to reach out if you have any other questions, we are always happy to help and truly value your business!",
-    "human": {"groundedness": 5, "tone": 5, "conciseness": 1}
+    "human": {"groundedness": 5, "tone": 4, "conciseness": 1}
   },
   {
     "id": "bad_robotic_cold",
