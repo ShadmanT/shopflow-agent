@@ -272,10 +272,11 @@ Latest agreement (n=10):
 
 The full suite calls live Claude + OpenAI APIs, so running it on every push would be slow, flaky, and cost money. CI is split in two tiers:
 
-- **`ci.yml`** — runs on every push and PR. No API calls: it byte-compiles the code and runs the offline eval-harness tests (grading logic + `cases.json` integrity). This is the gate that catches regressions in the harness itself, for free. Run the same checks locally:
+- **`ci.yml`** — runs on every push and PR. No API calls: it byte-compiles the code and runs the offline eval-harness tests (grading logic, judge parser, RAG grading, and `cases.json` integrity) with **pytest**. This is the gate that catches regressions in the harness itself, for free. Run the same checks locally:
 
   ```bash
-  python -m unittest discover -s evals/tests -v
+  pip install -r requirements-dev.txt
+  pytest evals/tests
   ```
 
 - **`evals.yml`** — runs the **real** agent eval suite. Triggered manually from the Actions tab (`workflow_dispatch`, with optional `runs`/`threshold` inputs) or on a weekly schedule, using the `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` repository secrets. It enforces the pass-rate threshold via the runner's exit code and uploads the results JSON as a build artifact.
