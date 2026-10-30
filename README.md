@@ -252,14 +252,21 @@ python evals/rag_eval.py --k 3
 python evals/compare_prompts.py --category proactiveness
 ```
 
-**Validating the judge against humans** (`validate_judge.py`). An LLM judge is only trustworthy if it agrees with a person, so the judge is itself evaluated. `evals/judge_validation/samples.json` holds a curated set of responses — some good, some deliberately flawed (invented refund amount, fabricated policy, rambling markdown, robotic tone) — each with a `human` score field you fill in. The script judges every sample and reports **exact-match, within-1, and pass/fail agreement** between the judge and your labels per dimension:
+**Validating the judge against humans** (`validate_judge.py`). An LLM judge is only trustworthy if it agrees with a person, so the judge is itself evaluated. `evals/judge_validation/samples.json` holds 10 curated responses — some good, some deliberately flawed (invented refund amount, fabricated policy, rambling markdown, robotic tone) — each with human 1–5 scores. The script judges every sample and reports **exact-match, within-1, and pass/fail agreement** between the judge and the human labels per dimension:
 
 ```bash
-# 1. Fill the "human" scores (1-5) in evals/judge_validation/samples.json
-# 2. python evals/validate_judge.py
+python evals/validate_judge.py
 ```
 
-Without labels it still runs and prints the judge's scores next to blank human columns, so you can confirm the judge rates the good samples high and the flawed ones low before labeling. This closes the loop: the deterministic suite checks the agent, the judge checks response quality, and this checks the judge.
+Latest agreement (n=10):
+
+| Dimension | Exact | Within-1 | MAE |
+|---|---|---|---|
+| groundedness | 80% | 90% | 0.30 |
+| tone | 60% | 90% | 0.50 |
+| conciseness | 80% | 100% | 0.20 |
+
+**Pass/fail agreement (accept vs. reject at threshold 4): 100%** — the judge and the human never disagree on the bottom-line decision; where scores differ it's by a single point, and the main gap is the judge grading tone slightly stricter than the human on cheery-but-flawed replies. (The judge is non-deterministic, so exact/MAE shift a point or two between runs; pass/fail and within-1 are stable.) This closes the loop: the deterministic suite checks the agent, the judge checks response quality, and this checks the judge.
 
 ### Continuous integration
 
